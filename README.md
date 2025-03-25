@@ -1,2 +1,2 @@
-# Plataforma_Log-stica
+# Plataforma_Logistica
 Trabalho de Conclusão de Curso
