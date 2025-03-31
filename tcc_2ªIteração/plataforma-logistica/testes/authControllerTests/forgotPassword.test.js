@@ -1,17 +1,17 @@
-jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
   User: {
     findOne: jest.fn()
   }
 }));
 
-jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/services/emailService.js', () => ({
+jest.mock('plataforma-logistica/src/services/emailService.js', () => ({
   sendResetPasswordEmail: jest.fn()
 }));
 
 const crypto = require('crypto');
-const { forgotPassword } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/controllers/authController.js');
-const { User } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models');
-const { sendResetPasswordEmail } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/services/emailService.js');
+const { forgotPassword } = require('plataforma-logistica/src/controllers/authController.js');
+const { User } = require('plataforma-logistica/models');
+const { sendResetPasswordEmail } = require('plataforma-logistica/src/services/emailService.js');
 
 beforeEach(() => {
   jest.spyOn(console, 'error').mockImplementation(() => {});

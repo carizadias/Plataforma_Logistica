@@ -1,12 +1,12 @@
-jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
   PostOfficeUser: {
     findOne: jest.fn()
   },
   PostOfficeUserType: {}
 }));
 
-const { loginPostOffice } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/controllers/authController.js');
-const { PostOfficeUser } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models');
+const { loginPostOffice } = require('plataforma-logistica/src/controllers/authController.js');
+const { PostOfficeUser } = require('plataforma-logistica/models');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 

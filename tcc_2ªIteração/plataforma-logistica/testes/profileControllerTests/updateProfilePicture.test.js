@@ -1,11 +1,11 @@
-const { updateProfilePicture } = require('../../src/controllers/profileController');
-const { User } = require('../../models'); 
+const { updateProfilePicture } = require('plataforma-logistica/src/controllers/profileController');
+const { User } = require('plataforma-logistica/models'); 
 const fs = require('fs');
 const path = require('path');
 
 jest.mock('fs');
 jest.mock('path');
-jest.mock('../../models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
   User: {
     findByPk: jest.fn(),
   },
@@ -27,6 +27,7 @@ describe('updateProfilePicture', () => {
     };
 
     jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   test('retorna 400 se nenhuma imagem for enviada', async () => {

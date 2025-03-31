@@ -1,6 +1,6 @@
-const { getProfile } = require('../../src/controllers/userController'); 
-const { User } = require('../../models'); 
-jest.mock('../../models', () => ({
+const { getProfile } = require('plataforma-logistica/src/controllers/userController'); 
+const { User } = require('plataforma-logistica/models'); 
+jest.mock('plataforma-logistica/models', () => ({
   User: {
     findOne: jest.fn(),
   },
@@ -21,6 +21,7 @@ describe('getProfile', () => {
     };
 
     jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   test('retorna 404 se usuário não for encontrado', async () => {

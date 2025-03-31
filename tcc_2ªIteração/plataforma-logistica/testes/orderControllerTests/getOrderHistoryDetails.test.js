@@ -1,8 +1,8 @@
 const request = require('supertest');
-const app = require('../../app');
+const app = require('plataforma-logistica/app.js');
 const jwt = require('jsonwebtoken');
 
-jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
   Order: {
     findOne: jest.fn()
   },
@@ -20,7 +20,7 @@ jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-
   }
 }));
 
-const { Order, User, UserRoles } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models');
+const { Order, User, UserRoles } = require('plataforma-logistica/models');
 
 describe('GET /api/orders/details/:order_id', () => {
   let token, decodedToken;

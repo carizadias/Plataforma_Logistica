@@ -1,12 +1,12 @@
 const request = require('supertest');
-const app = require('../../app');
+const app = require('plataforma-logistica/app.js');
 const jwt = require('jsonwebtoken');
 const { 
   Order, Payment, PostOffice, OrderType, DeliveryType, 
   Recipient, User, OrderRecipient 
-} = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models');
+} = require('plataforma-logistica/models');
 
-jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models', () => {
+jest.mock('plataforma-logistica/models', () => {
   return {
     Order: {
       create: jest.fn(),
@@ -39,7 +39,7 @@ jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-
     }
   };
 });
-jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/services/emailService.js', () => ({
+jest.mock('plataforma-logistica/src/services/emailService.js', () => ({
   sendOrderStatusNotification: jest.fn()
 }));
 
@@ -55,7 +55,7 @@ beforeEach(() => {
     
     User.findByPk = jest.fn().mockResolvedValue({ user_id: 1, nif: '123456789' });
     
-    const { UserRoles } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models');
+    const { UserRoles } = require('plataforma-logistica/models');
     UserRoles.findOne = jest.fn().mockResolvedValue({ user_id: 1, user_type: 'user' });
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });

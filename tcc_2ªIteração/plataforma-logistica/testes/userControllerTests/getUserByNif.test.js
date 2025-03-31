@@ -1,7 +1,7 @@
-const { getUserByNIF } = require('../../src/controllers/userController'); 
-const { User } = require('../../models');
+const { getUserByNIF } = require('plataforma-logistica/src/controllers/userController'); 
+const { User } = require('plataforma-logistica/models');
 
-jest.mock('../../models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
   User: {
     findOne: jest.fn(),
   },
@@ -22,6 +22,7 @@ describe('getUserByNIF', () => {
     };
 
     jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   test('retorna 404 se usuário não for encontrado', async () => {

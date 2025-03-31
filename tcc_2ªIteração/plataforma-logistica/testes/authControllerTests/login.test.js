@@ -1,4 +1,4 @@
-jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
   User: {
     findOne: jest.fn()
   },
@@ -7,8 +7,8 @@ jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-
   }
 }));
 
-const { login } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/controllers/authController.js');
-const { User, UserRoles } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models');
+const { login } = require('plataforma-logistica/src/controllers/authController.js');
+const { User, UserRoles } = require('plataforma-logistica/models');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 

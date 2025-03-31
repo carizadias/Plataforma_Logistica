@@ -1,14 +1,14 @@
-jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/config/database.js', () => ({
+jest.mock('plataforma-logistica/src/config/database.js', () => ({
     query: jest.fn(),
     QueryTypes: {
       SELECT: 'SELECT'
     }
   }));
   
-const db = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/config/database.js');
+const db = require('plataforma-logistica/src/config/database.js');
   
 const request = require('supertest');
-const app = require('../../app');
+const app = require('plataforma-logistica/app.js');
 
 
 describe('GET /api/payments/calculate_cost', () => {

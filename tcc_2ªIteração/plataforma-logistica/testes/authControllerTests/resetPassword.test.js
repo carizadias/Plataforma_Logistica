@@ -1,9 +1,9 @@
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
-const { resetPassword } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/controllers/authController.js');
-const { User } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models');
+const { resetPassword } = require('plataforma-logistica/src/controllers/authController.js');
+const { User } = require('plataforma-logistica/models');
 
-jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
     User: {
         findOne: jest.fn()
     }

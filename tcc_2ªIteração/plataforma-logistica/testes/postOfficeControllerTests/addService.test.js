@@ -1,9 +1,9 @@
 const request = require('supertest');
-const app = require('../../app'); 
-const { Service, PostOfficeUser } = require('../../models');
+const app = require('plataforma-logistica/app.js'); 
+const { Service, PostOfficeUser } = require('plataforma-logistica/models');
 const jwt = require('jsonwebtoken');
 
-jest.mock('../../models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
   Service: {
     create: jest.fn(),
   },

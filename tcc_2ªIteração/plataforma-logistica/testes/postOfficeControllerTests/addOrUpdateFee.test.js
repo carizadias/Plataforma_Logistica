@@ -1,20 +1,20 @@
 const request = require('supertest');
-const app = require('../../app');
+const app = require('plataforma-logistica/app.js');
 const jwt = require('jsonwebtoken');
 
-jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/config/database.js', () => ({
+jest.mock('plataforma-logistica/src/config/database.js', () => ({
   query: jest.fn(),
   QueryTypes: { SELECT: 'SELECT' }
 }));
 
-jest.mock('../../models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
   PostOfficeUser: {
     findByPk: jest.fn()
   }
 }));
 
-const db = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/config/database.js');
-const { PostOfficeUser } = require('../../models');
+const db = require('plataforma-logistica/src/config/database.js');
+const { PostOfficeUser } = require('plataforma-logistica/models');
 
 describe('POST /api/post_offices/add_or_update_fee', () => {
   let token;

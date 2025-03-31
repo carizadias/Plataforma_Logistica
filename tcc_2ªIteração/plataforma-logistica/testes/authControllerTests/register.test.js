@@ -1,4 +1,4 @@
-jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
   User: {
     findOne: jest.fn(),
     create: jest.fn()
@@ -16,8 +16,8 @@ jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-
 }));
 
 
-const { register } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/controllers/authController.js');
-const { User, UserRoles, PhoneNumber, Address } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models');
+const { register } = require('plataforma-logistica/src/controllers/authController.js');
+const { User, UserRoles, PhoneNumber, Address } = require('plataforma-logistica/models');
 const bcrypt = require('bcryptjs');
 
 beforeEach(() => {

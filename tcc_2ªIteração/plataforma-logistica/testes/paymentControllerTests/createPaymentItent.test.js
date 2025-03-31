@@ -1,8 +1,8 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
-const app = require('../../app');
+const app = require('plataforma-logistica/app.js');
 
-jest.mock('../../models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
   Order: {
     findByPk: jest.fn()
   },
@@ -32,7 +32,7 @@ jest.mock('stripe', () => {
 const stripe = require('stripe');
 const stripeInstance = stripe();
 
-const { Order, Payment, User, UserRoles } = require('../../models');
+const { Order, Payment, User, UserRoles } = require('plataforma-logistica/models');
 
 describe('POST /api/payments/pay', () => {
   let token;

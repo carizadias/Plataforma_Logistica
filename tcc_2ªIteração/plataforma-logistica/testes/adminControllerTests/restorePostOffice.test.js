@@ -1,15 +1,16 @@
-jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
   PostOffice: {
     findByPk: jest.fn()
   }
 }));
 
-const { restorePostOffice } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/controllers/adminPanelController');
-const { PostOffice } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/models');
+const { restorePostOffice } = require('plataforma-logistica/src/controllers/adminPanelController.js');
+const { PostOffice } = require('plataforma-logistica/models');
 
 beforeEach(() => {
   jest.spyOn(console, 'error').mockImplementation(() => {});
   jest.clearAllMocks();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 const createRes = () => {

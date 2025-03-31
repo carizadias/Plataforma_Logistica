@@ -5,7 +5,8 @@ const { User, PhoneNumber, Address, PostOffice, PostOfficeUser, PostOfficeUserTy
 const { sendResetPasswordEmail } = require('../services/emailService');
 const { Op } = require('sequelize');
 
-const blacklistedTokens = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/utils/tokenBlacklist.js');
+const blacklistedTokens = require('../../utils/tokenBlacklist');
+
 
 
 

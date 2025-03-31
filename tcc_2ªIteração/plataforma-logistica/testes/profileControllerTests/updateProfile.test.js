@@ -1,8 +1,8 @@
 const request = require('supertest');
-const app = require('../../app');
+const app = require('plataforma-logistica/app');
 const jwt = require('jsonwebtoken');
 
-jest.mock('../../models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
   User: {
     findOne: jest.fn(),
   },
@@ -11,7 +11,7 @@ jest.mock('../../models', () => ({
   },
 }));
 
-const { User, PostOfficeUser } = require('../../models');
+const { User, PostOfficeUser } = require('plataforma-logistica/models');
 
 describe('PUT /api/profile', () => {
   let tokenUser, tokenPostOfficeUser;

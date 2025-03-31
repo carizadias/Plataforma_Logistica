@@ -1,8 +1,8 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
-const app = require('../../app');
+const app = require('plataforma-logistica/app.js');
 
-jest.mock('../../models', () => ({
+jest.mock('plataforma-logistica/models', () => ({
   Order: {
     findByPk: jest.fn()
   },
@@ -20,12 +20,12 @@ jest.mock('../../models', () => ({
   }
 }));
 
-jest.mock('../../src/services/emailService', () => ({
+jest.mock('plataforma-logistica/src/services/emailService.js', () => ({
   sendOrderStatusNotification: jest.fn()
 }));
 
-const { Order, PostOfficeUser } = require('../../models');
-const { sendOrderStatusNotification } = require('../../src/services/emailService');
+const { Order, PostOfficeUser } = require('plataforma-logistica/models');
+const { sendOrderStatusNotification } = require('plataforma-logistica/src/services/emailService.js');
 
 describe('PUT /api/orders/:order_id/status', () => {
   let token;

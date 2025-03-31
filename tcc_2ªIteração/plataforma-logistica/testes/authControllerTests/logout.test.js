@@ -1,7 +1,7 @@
-const { logout } = require('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/src/controllers/authController.js');
-const blacklistedTokens = require('../../utils/tokenBlacklist');
+const { logout } = require('plataforma-logistica/src/controllers/authController.js');
+const blacklistedTokens = require('plataforma-logistica/utils/tokenBlacklist.js');
 
-jest.mock('C:/Users/Administrador/OneDrive/Desktop/tcc_2ªIteração/plataforma-logistica/utils/tokenBlacklist', () => ({
+jest.mock('plataforma-logistica/utils/tokenBlacklist', () => ({
   add: jest.fn()
 }));
 
