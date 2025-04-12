@@ -1,6 +1,5 @@
 const nodemailer = require("nodemailer");
 require("dotenv").config();
-const { User, OrderRecipient, Recipient } = require('../../models');
 
 const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -26,82 +25,57 @@ const sendResetPasswordEmail = async (email, token) => {
 };
 
 const sendOrderStatusNotification = async (order, status) => {
-  const { sender_nif } = order;
+  const { order_id, sender, recipients } = order;
 
-  const sender = await getSenderByNif(sender_nif);
   if (!sender || !sender.email) {
     console.error("Email do remetente não encontrado.");
     return;
   }
 
-  const senderEmail = sender.email;
+  const subject = `Status da sua encomenda #${order_id} alterado para: ${status}`;
+  const senderText = `Olá, o status da sua encomenda com ID #${order_id} foi alterado para "${status}".`;
+  const senderHtml = `<p>Olá, o status da sua encomenda com ID #${order_id} foi alterado para "<strong>${status}</strong>".</p>`;
 
-  const recipient = await getRecipientByOrderId(order.order_id);
-  if (!recipient || !recipient.email) {
-    console.error("Email do destinatário não encontrado.");
-    return;
-  }
-
-  const recipientEmail = recipient.email;
-
-  const subject = `Status da sua encomenda #${order.order_id} alterado para: ${status}`;
-  const text = `A encomenda com ID #${order.order_id} teve seu status alterado para "${status}".`;
-  const html = `<p>A encomenda com ID #${order.order_id} teve seu status alterado para "<strong>${status}</strong>".</p>`;
-
+  // E-mail para o remetente
   const senderMailOptions = {
     from: process.env.EMAIL_USER,
-    to: senderEmail,
-    subject: `Atualização sobre a sua encomenda #${order.order_id}`,
-    text: `Olá, o status da sua encomenda com ID #${order.order_id} foi alterado para "${status}".`,
-    html: `<p>Olá, o status da sua encomenda com ID #${order.order_id} foi alterado para "<strong>${status}</strong>".</p>`,
+    to: sender.email,
+    subject: `Atualização sobre a sua encomenda #${order_id}`,
+    text: senderText,
+    html: senderHtml,
   };
 
-  const recipientMailOptions = {
-    from: process.env.EMAIL_USER,
-    to: recipientEmail,
-    subject: `Status da sua encomenda #${order.order_id}`,
-    text: `A encomenda com ID #${order.order_id} que você está aguardando teve seu status alterado para "${status}".`,
-    html: `<p>A encomenda com ID #${order.order_id} que você está aguardando teve seu status alterado para "<strong>${status}</strong>".</p>`,
-  };
-
-try {
-  await transporter.sendMail(senderMailOptions);
-  console.log(`Notificação de status enviada para o remetente: ${senderEmail}`);
-} catch (error) {
-  console.error("Erro ao enviar e-mail para o remetente:", error);
-}
-
-try {
-  await transporter.sendMail(recipientMailOptions);
-  console.log(`Notificação de status enviada para o destinatário: ${recipientEmail}`);
-} catch (error) {
-  console.error("Erro ao enviar e-mail para o destinatário:", error);
-}
-};
-
-
-const getSenderByNif = async (nif) => {
   try {
-    const sender = await User.findOne({ where: { nif } });
-    return sender; 
+    await transporter.sendMail(senderMailOptions);
+    console.log(`Notificação enviada ao remetente: ${sender.email}`);
   } catch (error) {
-    console.error("Erro ao buscar remetente:", error);
-    return null;
+    console.error("Erro ao enviar e-mail para o remetente:", error);
   }
-};
 
-const getRecipientByOrderId = async (orderId) => {
-  try {
-    const orderRecipient = await OrderRecipient.findOne({ where: { order_id: orderId } });
-    if (!orderRecipient) {
-      return null; 
+  // Enviar e-mail para cada destinatário
+  for (const recipient of recipients) {
+    if (!recipient.email) {
+      console.warn(`Destinatário ${recipient.user_id} sem e-mail. Pulando...`);
+      continue;
     }
 
-    const recipient = await Recipient.findOne({ where: { user_nif: orderRecipient.recipient_nif } });
-    return recipient; 
-  } catch (error) {
-    console.error("Erro ao buscar destinatário:", error);
-    return null;
+    const recipientText = `A encomenda com ID #${order_id} que você está aguardando teve seu status alterado para "${status}".`;
+    const recipientHtml = `<p>A encomenda com ID #${order_id} que você está aguardando teve seu status alterado para "<strong>${status}</strong>".</p>`;
+
+    const recipientMailOptions = {
+      from: process.env.EMAIL_USER,
+      to: recipient.email,
+      subject,
+      text: recipientText,
+      html: recipientHtml,
+    };
+
+    try {
+      await transporter.sendMail(recipientMailOptions);
+      console.log(`Notificação enviada ao destinatário: ${recipient.email}`);
+    } catch (error) {
+      console.error(`Erro ao enviar e-mail para o destinatário ${recipient.email}:`, error);
+    }
   }
 };
 

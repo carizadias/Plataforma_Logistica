@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
-    const Subservice = sequelize.define('SubService', {
-        subservice_id: {
+    const SubService = sequelize.define('SubService', {
+        sub_service_id: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true
@@ -18,8 +18,25 @@ module.exports = (sequelize, DataTypes) => {
             defaultValue: true
         }
     }, {
-        tableName: 'subservices',
+        tableName: 'sub_services',
         timestamps: false
     });
-    return Subservice;
+
+    SubService.associate = (models) => {
+        SubService.belongsToMany(models.Service, {
+            through: 'service_sub_service',
+            foreignKey: 'sub_service_id',
+            otherKey: 'service_id',
+            as: 'subServices'
+        });
+
+        SubService.belongsToMany(models.SpecialService, {
+            through: 'sub_service_special_service',
+            foreignKey: 'sub_service_id',
+            otherKey: 'special_service_id',
+            as: 'specialServices',
+            timestamps: false
+        });
+    };
+    return SubService;
 };

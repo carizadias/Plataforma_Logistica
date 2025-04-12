@@ -1,7 +1,8 @@
 require('dotenv').config();
 const { Order, Payment } = require('../../models');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const db = require("../config/database");
+const feeService = require('../services/feeService');
+
 
 
 exports.createPaymentIntent = async (req, res) => {
@@ -45,39 +46,27 @@ exports.createPaymentIntent = async (req, res) => {
 
 exports.calculateFee = async (req, res) => {
   try {
-    const { subservice_id, order_type_id, destination } = req.query;
-    const weight = Number(req.query.weight);
+    const { sub_service_id, order_type_id, destination, weight } = req.query;
 
-    if (!subservice_id || !order_type_id || isNaN(weight) || !destination) {
-      return res.status(400).json({ message: "Todos os campos são obrigatórios." });
+    if (!sub_service_id || !order_type_id || !destination || isNaN(weight)) {
+      return res.status(400).json({ message: "Todos os campos são obrigatórios e o peso deve ser numérico." });
     }
 
-    const priceColumn = destination.toLowerCase() === "nacional" ? "price_national" : "price_international";
+    console.log("req.query"+req.query)
 
-    const rows = await db.query(
-      `SELECT ${priceColumn} AS price FROM fees 
-          WHERE subservice_id = :subservice_id 
-          AND order_type_id = :order_type_id 
-          AND :weight BETWEEN weight_min AND weight_max 
-          LIMIT 1`,
-      {
-        replacements: {
-          subservice_id,
-          order_type_id,
-          weight
-        },
-        type: db.QueryTypes.SELECT
-      }
-    );
+    const price = await feeService.calculateFee({
+      sub_service_id,
+      order_type_id,
+      weight: parseFloat(weight),
+      destination
+    });
 
-    if (!rows || rows.length === 0) {
-      return res.status(404).json({ message: "Nenhuma tarifa encontrada para os critérios informados." });
-    }
+    console.log("price:"+price)
 
-    res.status(200).json({ price: rows[0].price });
+    return res.status(200).json({ price });
 
   } catch (error) {
-    console.error("Erro ao calcular preço:", error);
-    res.status(500).json({ error: "Erro interno do servidor" });
+    console.error("Erro ao calcular preço:", error.message);
+    return res.status(404).json({ message: error.message });
   }
 };

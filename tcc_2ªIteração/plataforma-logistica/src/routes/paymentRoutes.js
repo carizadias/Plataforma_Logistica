@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
-const {isUser} = require('../middlewares/isUser');
+const {isCommonUser} = require('../middlewares/isCommonUser');
+const {authenticate} = require('../middlewares/authenticate');
 
 
 
-router.post('/pay', isUser, paymentController.createPaymentIntent);
-router.get('/calculate_cost', paymentController.calculateFee);
+router.post('/pay',authenticate, isCommonUser, paymentController.createPaymentIntent);//, isUser
+router.get('/calculate_cost',authenticate, paymentController.calculateFee);
 
 module.exports = router;

@@ -1,3 +1,4 @@
+// models/Fee.js
 module.exports = (sequelize, DataTypes) => {
   const Fee = sequelize.define("Fee", {
     fee_id: {
@@ -7,13 +8,37 @@ module.exports = (sequelize, DataTypes) => {
     },
     order_type_id: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: false,
+      references: {
+        model: 'order_types',
+        key: 'order_type_id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'RESTRICT'
     },
-    subservice_id: {
+    sub_service_id: {
       type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'sub_services',
+        key: 'sub_service_id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'RESTRICT'
+    },
+    weight_min: {
+      type: DataTypes.DECIMAL,
       allowNull: false
     },
-    fee: {
+    weight_max: {
+      type: DataTypes.DECIMAL,
+      allowNull: false
+    },
+    price_national: {
+      type: DataTypes.DECIMAL,
+      allowNull: false
+    },
+    price_international: {
       type: DataTypes.DECIMAL,
       allowNull: false
     }
@@ -29,8 +54,8 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     Fee.belongsTo(models.SubService, {
-      foreignKey: "subservice_id",
-      as: "subservice"
+      foreignKey: "sub_service_id",
+      as: "subService"
     });
   };
 

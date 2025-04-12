@@ -5,13 +5,21 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true
     },
-    sender_nif: {
-      type: DataTypes.CHAR,
+    sender_id: {
+      type: DataTypes.INTEGER,
       allowNull: false,
-    },
+      references: {
+        model: 'users',
+        key: 'user_id'
+      }
+    },    
     order_type_id: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: false,
+      references: {
+        model: 'order_types',
+        key: 'order_type_id'
+      }
     },
     height: {
       type: DataTypes.DECIMAL,
@@ -27,7 +35,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     payment_id: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: false,
+      references: {
+        model: 'payments',
+        key: 'payment_id'
+      }
     },
     send_date: {
       type: DataTypes.DATE,
@@ -35,7 +47,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     post_office_id: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: false,
+      references: {
+        model: 'post_offices',
+        key: 'post_office_id'
+      }
     },
     description: {
       type: DataTypes.STRING,
@@ -47,33 +63,44 @@ module.exports = (sequelize, DataTypes) => {
     },
     delivery_type_id: {
       type: DataTypes.INTEGER,
-      allowNull: true
+      allowNull: true,
+      references: {
+        model: 'delivery_types',
+        key: 'delivery_type_id'
+      }
     },
     delivery_date: {
       type: DataTypes.DATE,
       allowNull: true
     },
-    current_status: {
-      type: DataTypes.CHAR,
-      allowNull: false
-    },
     order_status_id: {
       type: DataTypes.INTEGER,
-      allowNull: true
-    },
+      allowNull: true,
+      defaultValue: 1,// pending
+      references: {
+        model: 'order_status',
+        key: 'order_status_id'
+      }
+    }
   }, {
     tableName: 'orders',
     timestamps: false
   });
 
+  Order.associate = function(models) {
+    Order.belongsTo(models.Payment, { foreignKey: 'payment_id', as: 'payment' });
+    Order.belongsTo(models.User, { foreignKey: 'sender_id', as: 'sender' });
+    Order.belongsTo(models.OrderType, { foreignKey: 'order_type_id', as: 'orderType' });
+    Order.belongsTo(models.PostOffice, { foreignKey: 'post_office_id', as: 'postOffice' });
+    Order.belongsTo(models.DeliveryType, { foreignKey: 'delivery_type_id', as: 'deliveryType' });
+    Order.belongsTo(models.OrderStatus, { foreignKey: 'order_status_id', as: 'status' });
 
-
-
-   Order.associate = function(models) {
-Order.belongsTo(models.Payment, { foreignKey: 'payment_id', as: 'payment' });
-
-
-    Order.belongsToMany(models.Recipient, { through: models.OrderRecipient, foreignKey: 'order_id' });
+    Order.belongsToMany(models.User, {
+      through: models.OrderRecipient,
+      foreignKey: 'order_id',
+      otherKey: 'recipient_id',
+      as: 'recipients'
+    });
   };
 
   return Order;

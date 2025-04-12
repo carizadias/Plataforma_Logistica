@@ -1,13 +1,15 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require("crypto");
-const { User, PhoneNumber, Address, PostOffice, PostOfficeUser, PostOfficeUserType, UserRoles, PostOfficeUserRoles } = require('../../models');
+const { User, AdminUserData, PostOfficeAdminData, PostOfficeEmployeeData, UserType, PhoneNumber, Address, PostOffice, CommonUserData, PostOfficeUser, PostOfficeUserType, UserRole, PostOfficeUserRoles } = require('../../models');
 const { sendResetPasswordEmail } = require('../services/emailService');
 const { Op } = require('sequelize');
 
 const blacklistedTokens = require('../../utils/tokenBlacklist');
 
-
+//falta:
+//estes estão escaláveis? seguem boas práticas?
+//logica de forgot password e resetpassword
 
 
 exports.register = async (req, res) => {
@@ -17,30 +19,31 @@ exports.register = async (req, res) => {
         let user = await User.findOne({ where: { email } });
 
         if (user) {
-            const existingRole = await UserRoles.findOne({ where: { user_id: user.user_id, user_type: "user" } });
+            const existingRole = await UserRole.findOne({ where: { user_id: user.user_id, user_type: "common" } });
 
             if (existingRole) {
                 return res.status(400).json({ message: "Usuário já é um utilizador!" });
             }
 
-            await UserRoles.create({
+            await UserRole.create({
                 user_id: user.user_id,
-                user_type: "user",
+                user_type: "common",
             });
 
             return res.status(201).json({ message: "Usuário atualizado para utilizador com sucesso!" });
         }
 
-        user = await User.findOne({ where: { nif } });
-        if (user) return res.status(400).json({ message: 'Usuário  com este nif já existe' });
+        const existingNif = await CommonUserData.findOne({ where: { nif } });
+        if (existingNif) return res.status(400).json({ message: 'Usuário com este NIF já existe' });
+
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        user = await User.create({ nif, name, surname, email, password: hashedPassword });
+        user = await User.create({ nif, name, surname, email, password: hashedPassword , profile_picture_id: 1});
 
-        await UserRoles.create({
+        await UserRole.create({
             user_id: user.user_id,
-            user_type: "user",
+            user_type: "common",
         });
 
         const phoneNumber = await PhoneNumber.create({
@@ -48,9 +51,6 @@ exports.register = async (req, res) => {
             phone_number_code: phone_number_code,
             user_id: user.user_id
         });
-
-        user.phone_number_id = phoneNumber.phone_number_id;
-        await user.save();
 
         const address = await Address.create({
             street,
@@ -61,8 +61,12 @@ exports.register = async (req, res) => {
             owner_type: 'user'
         });
 
-        user.address_id = address.address_id;
-        await user.save();
+        await CommonUserData.create({
+            user_id: user.user_id,
+            address_id: address.address_id,
+            phone_number_id: phoneNumber.phone_number_id,
+            nif: nif,
+        });
 
         const userResponse = user.toJSON();
         delete userResponse.password;
@@ -76,31 +80,63 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-        const user = await User.findOne({ where: { email } });
-        if (!user) return res.status(400).json({ message: 'Usuario não encontrado' });
+    // 1. Encontrar utilizador pelo email
+    const user = await User.findOne({
+      where: { email },
+      include: [{
+        model: UserRole,
+        as: 'roles',
+        include: [{ model: UserType, as: 'type' }]
+      }]
+    });
 
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ message: 'Senha incorreta' });
+    if (!user) return res.status(400).json({ message: 'Utilizador não encontrado' });
 
-        const userRole = await UserRoles.findOne({ where: { user_id: user.user_id } });
-        const userType = userRole ? userRole.user_type : 'user';
+    // 2. Verificar a senha
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: 'Senha incorreta' });
 
-        const token = jwt.sign(
-            { user_id: user.user_id, nif: user.nif, type: userType },
-            process.env.JWT_Secret,
-            { expiresIn: '1h' }
-        );
-        res.status(200).json({token: token });
+    // 3. Verificar se está ativo
+    if (!user.is_active) return res.status(403).json({ message: 'Utilizador desativado' });
 
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro no servidor' });
+    // 4. Verificar o tipo do utilizador
+    const roles = user.roles.map(r => r.user_type);
+    const userType = roles.length > 0 ? roles[0] : 'unknown'; // pode ter múltiplos papéis
+
+    // 5. Dados adicionais (ex: post_office_id se for funcionário ou admin de correio)
+    let additionalData = null;
+
+    if (userType === 'postOfficeEmployee') {
+        additionalData = await PostOfficeEmployeeData.findOne({ where: { user_id: user.user_id } });
+    } else if (userType === 'postOfficeAdmin') {
+        additionalData = await PostOfficeAdminData.findOne({ where: { user_id: user.user_id } });
     }
+
+    // 6. Gerar token JWT
+    const token = jwt.sign(
+      {
+        user_id: user.user_id,
+        email: user.email,
+        role: userType,
+        post_office_id: additionalData ? additionalData.post_office_id : null,
+      },
+      process.env.JWT_Secret,
+      { expiresIn: '1h' }
+    );
+
+    // 7. Retornar token
+    return res.status(200).json({ token });
+
+  } catch (error) {
+    console.error('Erro no login:', error);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
 };
 
+//acho que não é preciso alterações(por agr)
 exports.logout = (req, res) => {
     const token = req.header("Authorization")?.split(" ")[1];
 
@@ -110,225 +146,307 @@ exports.logout = (req, res) => {
     res.status(200).json({ message: "Logout realizado com sucesso" });
 };
 
+//para todos ou apenas utilizador comum? implementar se admin de correio e funcionário esquecerem passe
 exports.forgotPassword = async (req, res) => {
-    try {
-        const { email } = req.body;
-        const user = await User.findOne({ where: { email } });
+  try {
+      const { email } = req.body;
 
-        if (!user) return res.status(404).json({ message: "E-mail não encontrado" });
+      const commonUserData = await CommonUserData.findOne({
+          include: [
+              {
+                  model: User,
+                  as: 'user',
+                  where: { email },
+                  attributes: ['user_id', 'email']
+              }
+          ]
+      });
 
-        const token = crypto.randomBytes(20).toString("hex");
-        const expireTime = new Date(Date.now() + 3600000);
+      if (!commonUserData) {
+          return res.status(404).json({ message: "E-mail não encontrado" });
+      }
 
-        await user.update({ resetToken: token, resetTokenExpire: expireTime });
+      const token = crypto.randomBytes(20).toString("hex");
+      const expireTime = new Date(Date.now() + 3600000); // 1 hora
 
-        await sendResetPasswordEmail(email, token);
+      await commonUserData.update({
+          resetToken: token,
+          resetTokenExpire: expireTime
+      });
 
-        res.status(200).json({ message: "Email de recuperação enviado com sucesso", token });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Erro ao processar solicitação" });
-    }
+      await sendResetPasswordEmail(commonUserData.user.email, token);
+
+      res.status(200).json({ message: "Email de recuperação enviado com sucesso" });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Erro ao processar solicitação" });
+  }
 };
 
+//e em relação aos outros utilizadores🤔
+//também lembrar ao aprovar um correio deveria ser enviada para o correio um email junto com palavra passe que ao entrar o correio deve altarar imediatamente
 exports.resetPassword = async (req, res) => {
-    try {
-        const { token, newPassword } = req.body;
+  try {
+      const { token, newPassword } = req.body;
 
-        const user = await User.findOne({
-            where: {
-                resetToken: token,
-                resetTokenExpire: { [Op.gt]: new Date() },
-            },
-        });
+      const commonUserData = await CommonUserData.findOne({
+          where: {
+              resetToken: token,
+              resetTokenExpire: { [Op.gt]: new Date() }
+          },
+          include: [
+              {
+                  model: User,
+                  as: 'user',
+                  attributes: ['user_id', 'password']
+              }
+          ]
+      });
 
-        if (!user) return res.status(400).json({ message: "Token inválido ou expirado" });
+      if (!commonUserData || !commonUserData.user) {
+          return res.status(400).json({ message: "Token inválido ou expirado" });
+      }
 
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        await user.update({ password: hashedPassword, resetToken: null, resetTokenExpire: null });
+      await commonUserData.user.update({ password: hashedPassword });
+      await commonUserData.update({ resetToken: null, resetTokenExpire: null });
 
-        res.status(200).json({ message: "Senha redefinida com sucesso" });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Erro ao redifinir senha" });
-    }
+      res.status(200).json({ message: "Senha redefinida com sucesso" });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Erro ao redefinir senha" });
+  }
 };
+
 
 exports.registerAdmin = async (req, res) => {
-    try {
-        const { nif, name, surname, email, password } = req.body;
+  try {
+    const { name, surname, email, password, created_by } = req.body;
 
-        let existingUser = await User.findOne({ where: { [Op.or]: [{ email }, { nif }] } });
+    // Verifica se já existe um usuário com este email
+    let existingUser = await User.findOne({ where: { email } });
 
+    if (existingUser) {
+      // Verifica se já é admin
+      const userRoles = await UserRole.findOne({
+        where: { user_id: existingUser.user_id, user_type: 'admin' },
+      });
 
-        if (existingUser) {
-            if (existingUser.nif === nif) {
-                return res.status(400).json({ message: 'Este NIF já está cadastrado para outro usuário!' });
-            }
-            const userRoles = await UserRoles.findOne({ where: { user_id: existingUser.user_id, user_type: 'admin' } });
-            if (userRoles) {
-                return res.status(400).json({ message: 'Este usuário já é um administrador!' });
-            }
+      if (userRoles) {
+        return res.status(400).json({ message: 'Este usuário já é um administrador!' });
+      }
 
-        } else {
-            const hashedPassword = await bcrypt.hash(password, 10);
-            existingUser = await User.create({
-                nif,
-                name,
-                surname,
-                email,
-                password: hashedPassword,
-                is_active: true,
-            });
-        }
+      // Se não for admin ainda, associar o papel admin
+      await UserRole.create({
+        user_id: existingUser.user_id,
+        user_type: 'admin',
+      });
 
-        await UserRoles.create({
-            user_id: existingUser.user_id,
-            user_type: "admin", 
-        });
+      // Cria o registro específico de dados de admin
+      await AdminUserData.create({
+        user_id: existingUser.user_id,
+        created_by: created_by || null,
+      });
 
-        const userAdminResponse = existingUser.toJSON();
-        delete userAdminResponse.password;
-        delete userAdminResponse.is_active;
+    } else {
+      // Criação do novo usuário admin
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-        res.status(201).json({ message: 'Admin registrado com sucesso!', userAdminResponse });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro ao registrar admin! Verifique se o token não está expirado' });
+      const newUser = await User.create({
+        name,
+        surname,
+        email,
+        password: hashedPassword,
+        profile_picture_id: 1,
+        is_active: true,
+      });
+
+      await UserRole.create({
+        user_id: newUser.user_id,
+        user_type: 'admin',
+      });
+
+      await AdminUserData.create({
+        user_id: newUser.user_id,
+        created_by: created_by || null,
+      });
+
+      existingUser = newUser;
     }
+
+    const userAdminResponse = existingUser.toJSON();
+    delete userAdminResponse.password;
+    delete userAdminResponse.is_active;
+
+    res.status(201).json({ message: 'Admin registrado com sucesso!', userAdminResponse });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao registrar admin! Verifique os dados enviados.' });
+  }
 };
+
 
 exports.registerPostOfficeUser = async (req, res) => {
-    try {
-        const { email, password, post_office_id, role = 'employee' } = req.body; 
+  try {
+    const {
+      name,
+      surname,
+      email,
+      password,
+      post_office_id,
+      role = 'postOfficeEmployee', // agora usamos os nomes exatos das roles
+    } = req.body;
 
-        if (!email || !password || !post_office_id || !role) {
-            return res.status(400).json({ message: "Todos os campos são obrigatórios." });
-        }
-        const existingUser = await PostOfficeUser.findOne({ where: { email } });
-        if (existingUser) return res.status(400).json({ message: 'Email já cadastrado' });
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        let newUser = await PostOfficeUser.create({
-            email,
-            password: hashedPassword,
-            post_office_id,
-            is_active: true
-        });
-
-        const validRoles = ['admin', 'employee']; 
-
-        if (role && !validRoles.includes(role)) {
-            return res.status(400).json({ message: 'Tipo de usuário inválido. Deve ser admin ou employee.' });
-        }
-
-        const postOfficeUserType = await PostOfficeUserType.findOne({ where: { name: role } });
-
-        if (!postOfficeUserType) {
-            return res.status(400).json({ message: 'Tipo de usuário inválido' });
-        }
-
-        await PostOfficeUserRoles.create({
-            post_office_user_id: newUser.post_office_user_id,
-            post_office_user_type_id: postOfficeUserType.post_office_user_type_id
-        });
-
-        newUser = newUser.toJSON(); 
-        delete newUser.password;
-        delete newUser.createdAt;
-        delete newUser.updatedAt;
-
-        res.status(201).json({ message: 'Usuário do Correio registrado com sucesso', newUser, role: postOfficeUserType.name });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro no servidor' });
+    // Validação dos campos obrigatórios
+    if (!email || !password || !post_office_id || !role || !name || !surname) {
+      return res.status(400).json({ message: "Todos os campos são obrigatórios." });
     }
+
+    // Verifica se o email já existe
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email já cadastrado' });
+    }
+
+    // Hasheia a senha
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Cria o novo usuário
+    const user = await User.create({
+      name,
+      surname,
+      email,
+      password: hashedPassword,
+      profile_picture_id: 1, // Padrão
+      is_active: true,
+    });
+
+    // Verifica se o tipo de usuário é válido
+    const validRoles = ['postOfficeAdmin', 'postOfficeEmployee'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ message: 'Tipo de usuário inválido. Deve ser postOfficeAdmin ou postOfficeEmployee.' });
+    }
+
+    // Associa o tipo ao usuário
+    await UserRole.create({
+      user_id: user.user_id,
+      user_type: role,
+    });
+
+    // Insere os dados específicos do funcionário ou administrador do correio
+    if (role === 'postOfficeAdmin') {
+      await PostOfficeAdminData.create({
+        user_id: user.user_id,
+        post_office_id,
+      });
+    } else if (role === 'postOfficeEmployee') {
+      await PostOfficeEmployeeData.create({
+        user_id: user.user_id,
+        post_office_id,
+      });
+    }
+
+    // Remove a senha antes de retornar os dados
+    const { password: _, ...userData } = user.toJSON();
+
+    return res.status(201).json({
+      message: `Usuário ${role === 'postOfficeAdmin' ? 'Administrador' : 'Funcionário'} do Correio registrado com sucesso`,
+      user: userData,
+      role,
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Erro no servidor ao registrar usuário do correio.' });
+  }
 };
+
 
 exports.registerPostOfficeWithAdmin = async (req, res) => {
-    try {
-        const { name, country_id, coverage_area, fee, admin_email, admin_password } = req.body;
+  try {
+    const {
+      name: postOfficeName,
+      country_id,
+      admin_name,
+      admin_surname,
+      admin_email,
+      admin_password,
+      phone_number,
+      phone_number_code,
+      nif,
+    } = req.body;
 
-        const existingUser = await PostOfficeUser.findOne({ where: { email: admin_email } });
-        if (existingUser) return res.status(400).json({ message: "Email já cadastrado" });
+    // Verificar se já existe um utilizador com o mesmo email
+    const existingUser = await User.findOne({ where: { email: admin_email } });
+    if (existingUser) return res.status(400).json({ message: "Email já cadastrado" });
 
-        const postOffice = await PostOffice.create({
-            name,
-            country_id,
-            coverage_area,
-            fee,
-            is_active: false,
-        });
-
-        const hashedPassword = await bcrypt.hash(admin_password, 10);
-
-        const postOfficeAdmin = await PostOfficeUser.create({
-            email: admin_email,
-            password: hashedPassword,
-            post_office_id: postOffice.post_office_id,
-            is_active: false,
-        });
-
-        const userType = await PostOfficeUserType.findOne({ where: { name: 'admin' } });
-
-        if (!userType) {
-            return res.status(400).json({ message: 'Tipo de usuário inválido' });
-        }
-
-        await PostOfficeUserRoles.create({
-            post_office_user_id: postOfficeAdmin.post_office_user_id,
-            post_office_user_type_id: userType.post_office_user_type_id
-        });
-
-        const { password, ...adminWithoutPassword } = postOfficeAdmin.toJSON();
-
-        res.status(201).json({
-            message: "Correio e Administrador registrados com sucesso! Aguardando aprovação do administrador geral.",
-            postOffice,
-            postOfficeAdmin: adminWithoutPassword,
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Erro ao registrar Correio e Administrador!" });
+    // Verificar se já existe um correio com o mesmo NIF
+    const existingPostOffice = await PostOffice.findOne({ where: { nif } });
+    if (existingPostOffice) {
+        return res.status(400).json({ message: "Já existe um Correio com este NIF" });
     }
-};
 
-exports.loginPostOffice = async (req, res) => {
-    try {
-        const { email, password } = req.body;
+    // Verificar se o número de telefone já existe, se não, criar um novo
+    //const phoneNumber = await PhoneNumber.findOne({ where: { phone_number: phone_number } });
 
-        const postOfficeUser = await PostOfficeUser.findOne({
-            where: { email },
-            include: {
-                model: PostOfficeUserType, 
-                through: { attributes: [] },
-                as: 'roles'
-            }
-        });
+    // Hashear a senha
+    const hashedPassword = await bcrypt.hash(admin_password, 10);
 
-        if (!postOfficeUser) return res.status(400).json({ message: 'Usuário do Correio não encontrado' });
+    // Criar o utilizador (admin)
+    const user = await User.create({
+      name: admin_name,
+      surname: admin_surname,
+      email: admin_email,
+      password: hashedPassword,
+      profile_picture_id: 1, // Foto de perfil do administrador
+      is_active: false, // Ainda não aprovado
+    });
 
-        const isMatch = await bcrypt.compare(password, postOfficeUser.password);
-        if (!isMatch) return res.status(400).json({ message: 'Senha incorreta' });
+    // Criar e associar o número de telefone ao usuário
+    const createdPhoneNumber = await PhoneNumber.create({
+        user_id: user.user_id,
+        phone_number,
+        phone_number_code,
+    });
 
-        if (!postOfficeUser.is_active) {
-            return res.status(403).json({ message: 'Utilizador não esta validado' });
-        }
+    // Criar o Correio
+    const postOffice = await PostOffice.create({
+        name: postOfficeName,
+        country_id,
+        profile_picture: 2,
+        nif,
+        phone_number_id: createdPhoneNumber.phone_number_id,
+        is_active: false,
+    });
 
-        const userRole = postOfficeUser.roles.length > 0 ? postOfficeUser.roles[0].name : 'employee';
+    // Inserir os dados específicos do administrador de correio
+    await PostOfficeAdminData.create({
+        user_id: user.user_id,
+        post_office_id: postOffice.post_office_id,
+    });
 
-        const token = jwt.sign(
-            { id: postOfficeUser.post_office_user_id, post_office_id: postOfficeUser.post_office_id, role: userRole },
-            process.env.JWT_Secret,
-            { expiresIn: '1h' }
-        );
+    // Atribuir o tipo de utilizador "post_office_admin"
+    const userType = await UserType.findOne({ where: { name: 'postOfficeAdmin' } });
 
-        res.status(200).json({token: token });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro no servidor' });
+    if (!userType) {
+      return res.status(400).json({ message: 'Tipo de usuário inválido' });
     }
+
+    await UserRole.create({
+      user_id: user.user_id,
+      user_type: userType.name,
+    });
+
+    const { password, ...userWithoutPassword } = user.toJSON();
+
+    res.status(201).json({
+      message: "Correio e Administrador registrados com sucesso! Aguardando aprovação do administrador geral.",
+      postOffice,
+      admin: userWithoutPassword,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao registrar Correio e Administrador!" });
+  }
 };

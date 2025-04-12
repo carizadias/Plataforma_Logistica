@@ -1,28 +1,42 @@
 const express = require("express")
 const router = express.Router();
-const {isAuthenticated} = require('../middlewares/isAuthenticated');
 const profileController = require('../controllers/profileController');
-const upload = require('../middlewares/upload');
-const {isUser} = require('../middlewares/isUser');
-const {isUserIsPostOfficeAdmin} = require("../middlewares/isUserIsPostOfficeAdmin");
+//const upload = require('../middlewares/upload');
+const {isCommonUser} = require('../middlewares/isCommonUser');
+const {isAdmin} = require('../middlewares/isAdmin');
+const {isPostOfficeAdmin} = require('../middlewares/isPostOfficeAdmin');
+const {isPostOfficeEmployee} = require('../middlewares/isPostOfficeEmployee');
+const {authorizeRoles} = require("../middlewares/authorizeRoles")
+const { authenticate } = require("../middlewares/authenticate");
 
 
-router.get('/me',  isAuthenticated, profileController.getUserProfile);
+//perfil base
+router.get('/me', profileController.getProfile);//,  isAuthenticated
 
-router.put('/', isAuthenticated,  profileController.updateProfile);
 
-router.put('/password', isAuthenticated, profileController.changePassword);
+//perfil específico
+router.get('/me/common_user',authenticate, isCommonUser, profileController.getCommonProfile);
+router.get('/me/admin', authenticate, isAdmin,profileController.getAdminProfile);
+router.get('/me/post_office_admin',authenticate, isPostOfficeAdmin, profileController.getPostOfficeAdminProfile);
+router.get('/me/post_office_employee',authenticate, isPostOfficeEmployee, profileController.getPostOfficeEmployeeProfile);
 
-router.get('/addresses', isUserIsPostOfficeAdmin, profileController.getAddresses);
+//colocar /me/update ?
+router.put('/', authenticate, profileController.updateProfile);//, isAuthenticated
 
-router.post('/addresses', isUserIsPostOfficeAdmin, profileController.addAddress);
+router.get('/addresses', authenticate, authorizeRoles("admin","postOfficeAdmin"), profileController.getAddresses);//, isUserIsPostOfficeAdmin
 
-router.put('/addresses/:id', isUserIsPostOfficeAdmin, profileController.updateAddress);
+router.post('/addresses', authenticate, authorizeRoles("admin","postOfficeAdmin"), profileController.addAddress);//isUserIsPostOfficeAdmin,
 
-router.delete('/addresses/:id', isUserIsPostOfficeAdmin, profileController.deleteAddress);
+router.put('/addresses/:id', authenticate, authorizeRoles("admin","postOfficeAdmin"), profileController.updateAddress);//, isUserIsPostOfficeAdmin
 
-router.get('/post_offices/:id',isUser, profileController.getPostOffice);
+router.delete('/addresses/:id', authenticate, authorizeRoles("admin","postOfficeAdmin"), profileController.deleteAddress); //, isUserIsPostOfficeAdmin
 
-router.put('/users/:id/profile_picture',isUser, upload.single('profile_picture'), profileController.updateProfilePicture);
+router.get('/post_offices/:id',authenticate, authorizeRoles("common","postOfficeAdmin"), profileController.getPostOfficeProfile); //,isUser
+
+//router.put('/users/:id/profile_picture',isUser, upload.single('profile_picture'), profileController.updateProfilePicture);
+
+router.get('/nif/:nif',authenticate, isCommonUser, profileController.getUserByNIF);//,isUser
+
+router.get('/user_profile/:nif',authenticate, isCommonUser, profileController.getUserProfile);//,isUser
 
 module.exports = router;

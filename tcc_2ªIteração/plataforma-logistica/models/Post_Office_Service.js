@@ -1,31 +1,23 @@
-module.exports = (sequelize, DataTypes) => { 
+module.exports = (sequelize, DataTypes) => {
   const PostOfficeService = sequelize.define('PostOfficeService', {
+    post_office_id: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: 'PostOffices',
+        key: 'post_office_id'
+      }
+    },
     service_id: {
       type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    service_name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    service_description: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    service_code: {
-      type: DataTypes.INTEGER,
-      unique: true,
-      allowNull: false,
+      references: {
+        model: 'Services',
+        key: 'service_id'
+      }
     }
-  }, {
-    tableName: 'post_office_service',
-    timestamps: false,
+  },{
+    tableName: 'post_office_service', // Nome da tabela
+    timestamps: false 
   });
-
-  PostOfficeService.associate = function(models) {
-
-  };
 
   return PostOfficeService;
 };

@@ -1,5 +1,6 @@
 const { PostOffice, PostOfficeUser } = require('../../models');
 
+//todos estes ficam assim
 exports.getPendingPostOffices = async (req, res) => {
   try {
     const pendingPostOffices = await PostOffice.findAll({
@@ -12,6 +13,7 @@ exports.getPendingPostOffices = async (req, res) => {
     res.status(500).json({ error: "Erro ao buscar correios pendentes!" });
   }
 };
+
 
 exports.approvePostOffice = async (req, res) => {
   try {

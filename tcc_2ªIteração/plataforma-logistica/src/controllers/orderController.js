@@ -1,28 +1,18 @@
 const jwt = require('jsonwebtoken');
-const { Order, User, Recipient, OrderRecipient, Payment, PostOffice, OrderType, DeliveryType } = require('../../models');
+const { Order, User,CommonUserData, OrderStatus } = require('../../models');
 const { sendOrderStatusNotification } = require('../services/emailService')
+const { createOrderSchema } = require('../validators/orderValidator');
+const { createOrder } = require('../services/orderService');
+const orderDetailsService = require('../services/orderDetailsService');
 
+
+
+//em teste:
 exports.createOrder = async (req, res) => {
   try {
-    const {
-      sender_nif,
-      order_type_id,
-      height,
-      width,
-      weight,
-      payment_id,
-      send_date,
-      post_office_id,
-      description,
-      delivery_type_id,
-      delivery_date,
-      current_status,
-      order_status_id,
-      recipient_nifs
-    } = req.body;
-
-    if (!order_type_id || !height || !width || !weight || !payment_id || !send_date || !post_office_id || !recipient_nifs || !recipient_nifs.length === 0) {
-      return res.status(400).json({ message: 'Campos obrigatórios ausentes.' });
+    const { error } = createOrderSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
     }
 
     const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -31,265 +21,199 @@ exports.createOrder = async (req, res) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_Secret);
-    const { nif } = decoded;
+    //const senderNif = decoded.nif;
+    const userId = decoded.user_id; // Agora pegamos o user_id, não o nif
 
-    const payment = await Payment.findOne({ where: { payment_id } });
-    if (!payment) {
-      return res.status(400).json({ message: 'Pagamento inválido' });
+    // Buscar o nif na tabela de dados comuns do usuário (common user data)
+    const userCommonData = await CommonUserData.findOne({ where: { user_id: userId } });
+    if (!userCommonData) {
+      return res.status(404).json({ message: 'Dados de usuário não encontrados' });
     }
 
-    const postOffice = await PostOffice.findOne({ where: { post_office_id } });
-    if (!postOffice) {
-      return res.status(400).json({ message: 'Posto de correios inválido' });
-    }
+    //const senderNif = userCommonData.nif; // Agora temos o nif do usuário
 
-    const orderType = await OrderType.findOne({ where: { order_type_id } });
-    if (!orderType) {
-      return res.status(400).json({ message: 'Tipo de pedido inválido' });
-    }
+    const newOrder = await createOrder(req.body, userId);
 
-    const deliveryType = delivery_type_id ? await DeliveryType.findOne({ where: { delivery_type_id } }) : null;
-    if (delivery_type_id && !deliveryType) {
-      return res.status(400).json({ message: 'Tipo de entrega inválido' });
-    }
-
-    const tracking_code = `TRK-${Date.now()}`;
-
-    const newOrder = await Order.create({
-      sender_nif: nif,
-      order_type_id,
-      height,
-      width,
-      weight,
-      payment_id,
-      send_date,
-      post_office_id,
-      description,
-      tracking_code,
-      delivery_type_id,
-      delivery_date: delivery_date || null,
-      current_status: current_status || 'Pendente',
-      order_status_id
-    });
-
-    for (const recipient_nif of recipient_nifs) {
-      let recipient = await Recipient.findOne({ where: { user_nif: recipient_nif } });
-
-      if (!recipient) {
-        const userInfo = await User.findOne({ where: { nif: recipient_nif } });
-        if (userInfo) {
-          recipient = await Recipient.create({
-            user_nif: userInfo.nif,
-            name: userInfo.name,
-            surname: userInfo.surname,
-            email: userInfo.email,
-            address_id: userInfo.address_id,
-            phone_number_id: userInfo.phone_number_id
-          });
-        } else {
-          return res.status(400).json({ message: `Destinatário ${recipient_nif} não encontrado.` });
-        }
-      }
-
-      await OrderRecipient.create({
-        order_id: newOrder.order_id,
-        recipient_nif: recipient.user_nif,
-      });
-    }
-
-    res.status(201).json({ message: 'Pedido de entrega criado com sucesso!', order: newOrder, recipient_nifs });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao criar pedido de entrega' });
+    res.status(201).json({ message: 'Pedido de entrega criado com sucesso!', order: newOrder });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message || 'Erro ao criar pedido' });
   }
 };
+
 
 exports.getOrderHistory = async (req, res) => {
+  const userId = req.params.userId;
+
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) {
-        return res.status(401).json({ message: 'Token não fornecido' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_Secret);
-    const { nif } = decoded;
-
-    if (!nif) {
-        return res.status(403).json({ message: 'Acesso negado. Apenas usuários comuns podem consultar o histórico.' });
-    }
-
-    const user = await User.findOne({ where: { nif } });
-    if (!user) {
-        return res.status(404).json({ message: 'Usuário não encontrado' });
-    }
-
-    const orders = await Order.findAll({ where: { sender_nif: nif }, attributes: ['description'], include: [{ model: Recipient, through: OrderRecipient, attributes: ['name', 'surname'] }] });
-
-    res.status(200).json({ message: 'Histórico de encomendas recuperado com sucesso!', orders });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao recuperar histórico de encomendas.' });
-  }
-};
-
-
-exports.getOrderHistoryForRecipient = async (req, res) => {
-  try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ message: 'Token não fornecido' });
-    }
-
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-      return res.status(403).json({ message: 'Token inválido' });
-    }
-
-    const userNif = decoded.nif;
-
-    const user = await User.findOne({ where: { nif: userNif } });
-    if (!user) {
-      return res.status(404).json({ message: 'Usuário não encontrado' });
-    }
-
     const orders = await Order.findAll({
-      include: {
-        model: Recipient,
-        through: { model: OrderRecipient, where: { recipient_nif: userNif } },
-        required: true, 
-      }
+      where: { sender_id: userId },
+      attributes: ['description'], // Somente a descrição da ordem
+      include: [
+        {
+          model: User,
+          as: 'recipients',
+          attributes: ['name', 'surname'], // Somente nome e sobrenome do destinatário
+          through: { attributes: [] } // Ignora os dados da tabela intermediária
+        }
+      ]
     });
 
-    if (!orders || orders.length === 0) {
-      return res.status(404).json({ message: 'Nenhuma encomenda encontrada para este destinatário.' });
-    }
+    // Formatar a resposta para exibir uma lista clara de { name, surname, description }
+    const formattedHistory = [];
+    orders.forEach(order => {
+      order.recipients.forEach(recipient => {
+        formattedHistory.push({
+          name: recipient.name,
+          surname: recipient.surname,
+          description: order.description
+        });
+      });
+    });
 
-    res.status(200).json({ message: 'Encomendas recuperadas com sucesso!', orders });
+    return res.status(200).json({ history: formattedHistory });
+
   } catch (error) {
-    console.error('Erro ao recuperar encomendas:',error);
-    res.status(500).json({ error: 'Erro ao recuperar as encomendas.' });
+    console.error('Erro ao buscar histórico de ordens:', error);
+    return res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
   }
 };
 
-exports.getOrderHistoryDetails = async (req, res) => {
+exports.getReceivedOrderHistory = async (req, res) => {
+  const userId = req.params.userId;
+
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const orders = await Order.findAll({
+      include: [
+        {
+          model: User,
+          as: 'recipients',
+          where: { user_id: userId }, // Filtra apenas as ordens em que o usuário é destinatário
+          attributes: ['name', 'surname'], // Somente nome e sobrenome do destinatário
+          through: { attributes: [] } // Ignora os dados da tabela intermediária
+        },
+        {
+          model: User,
+          as: 'sender',
+          attributes: ['name', 'surname'] // Inclui também o nome e sobrenome do remetente
+        }
+      ]
+    });
+
+    // Formatar a resposta para exibir uma lista clara de { senderName, senderSurname, description }
+    const formattedHistory = orders.map(order => ({
+      senderName: order.sender.name,
+      senderSurname: order.sender.surname,
+      description: order.description
+    }));
+
+    return res.status(200).json({ history: formattedHistory });
+
+  } catch (error) {
+    console.error('Erro ao buscar histórico de ordens recebidas:', error);
+    return res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
+  }
+};
 
 
-    const decoded = jwt.verify(token, process.env.JWT_Secret);
-    const { nif } = decoded;
+//pode ser usado ambos sender e recipient basta dar o id do pedido
+exports.getOrderDetails = async function (req, res) {
+  const { orderId } = req.params;
 
+  try {
+    const order = await orderDetailsService.getOrderDetailsById(orderId);
+    res.status(200).json(order);
+  } catch (error) {
+    console.error('Erro ao buscar detalhes do pedido:', error);
+    res.status(404).json({ error: error.message });
+  }
+};
+
+
+//esta resposta envia passwords corrigir isto
+exports.updateOrderStatus = async (req, res) => {
+  try {
     const { order_id } = req.params;
-    if (!order_id) {
-      return res.status(400).json({ message: 'ID do pedido não fornecido' });
+    const { new_status_id } = req.body;
+
+    if (!new_status_id) {
+      return res.status(400).json({ message: "Novo status não fornecido." });
     }
 
-    const order = await Order.findOne({
-      where: { sender_nif: nif, order_id },
+    const validStatus = await OrderStatus.findByPk(new_status_id);
+    if (!validStatus) {
+      return res.status(400).json({ message: "Status inválido fornecido." });
+    }
+
+    const order = await Order.findByPk(order_id, {
       include: [
-        { model: Recipient, through: OrderRecipient, attributes: ['name', 'surname'] }
+        { model: User, as: 'sender' },
+        { model: User, as: 'recipients' }
       ]
     });
 
     if (!order) {
-      return res.status(404).json({ message: 'Pedido não encontrado' });
-    }
-
-    res.status(200).json({ message: 'Histórico de encomendas recuperado com sucesso!', order });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao recuperar histórico de encomendas.' });
-  }
-};
-
-exports.getOrderHistoryDetailsForRecipient = async (req, res) => {
-  try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ message: 'Token não fornecido' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_Secret); 
-    const userNif = decoded.nif;
-
-    const { order_id } = req.params;
-    if (!order_id) {
-      return res.status(400).json({ message: 'ID do pedido não fornecido' });
-    }
-
-    const order = await Order.findOne({
-      where: { order_id },
-      include: {
-        model: Recipient,
-        through: { model: OrderRecipient, where: { recipient_nif: userNif } },
-        required: true,
-      }
-    });
-
-    if (!order) {
-      return res.status(404).json({ message: 'Pedido não encontrado ou o usuário não é o destinatário deste pedido.' });
-    }
-
-    res.status(200).json({ message: 'Detalhes da encomenda recuperados com sucesso!', order });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao recuperar os detalhes da encomenda.' });
-  }
-};
-
-exports.updateOrderStatus = async (req, res) => {
-  try {
-    const { order_id } = req.params;
-    const { current_status } = req.body;
-
-    if (!current_status) {
-      return res.status(400).json({ message: "Status atual não fornecido." });
-    }
-
-    const order = await Order.findByPk(order_id);
-    if (!order) {
       return res.status(404).json({ message: "Pedido não encontrado." });
     }
 
-    const previousStatus = order.current_status; 
-    order.current_status = current_status;
+    //const previousStatus = order.order_status_id;
+    const previousStatusRecord = await OrderStatus.findByPk(order.order_status_id);
+    const previousStatusName = previousStatusRecord ? previousStatusRecord.name : order.order_status_id;
+
+
+    // Atualiza o status e salva
+    order.order_status_id = new_status_id;
     await order.save();
 
-    await sendOrderStatusNotification(order, current_status);
+    const newStatusName = validStatus.name;
 
-    res.status(200).json({ message: "Status do pedido atualizado com sucesso.", order });
+    // Envia notificação para todos os envolvidos
+    await sendOrderStatusNotification(order, newStatusName);
+
+    res.status(200).json({
+      message: `Status do pedido atualizado com sucesso de "${previousStatusName}" para "${newStatusName}".`,
+      order
+    });
+
   } catch (error) {
     console.error("Erro ao atualizar o status do pedido:", error);
-    res.status(500).json({ error: "Erro interno no servidor, verifique se o token esta expirado" });
+    res.status(500).json({
+      error: "Erro interno no servidor. Verifique se o token está expirado."
+    });
   }
 };
 
-exports.getOrdersByPostOffice = async (req, res) => {
+exports.getRecipientsByUser = async (req, res) => {
+  const userId = req.params.userId; // ID do usuário remetente que estamos buscando os destinatários
+
   try {
-    const postOfficeId = req.params.post_office_id;
-
-    if (!postOfficeId) {
-      return res.status(400).json({ message: 'Parâmetro post_office_id não fornecido' });
-    }
-
+    // Buscar todas as ordens enviadas por esse usuário
     const orders = await Order.findAll({
-      where: { post_office_id: postOfficeId },
-      attributes: ['order_id', 'current_status', 'sender_nif', 'tracking_code', 'send_date']
+      where: { sender_id: userId }, // Filtrando pelas ordens enviadas pelo usuário (remetente)
+      include: {
+        model: User,
+        as: 'recipients', // Alias para a relação 'recipients' que já está configurada em Order
+        attributes: ['user_id', 'name', 'email'], // Campos que se quer retornar do destinatário
+      },
     });
 
-    if (orders.length === 0) {
-      return res.status(404).json({ message: 'Nenhuma encomenda encontrada para este posto de correios' });
+    // Verificar se existem ordens ou destinatários encontrados
+    if (!orders || orders.length === 0) {
+      return res.status(404).json({ message: 'Nenhum destinatário encontrado.' });
     }
 
-    res.status(200).json({
-      message: 'Encomendas recuperadas com sucesso!',
-      orders
+    // Extrair os destinatários das ordens encontradas
+    const recipients = [];
+    orders.forEach(order => {
+      order.recipients.forEach(recipient => {
+        recipients.push(recipient);
+      });
     });
+
+    // Retornar todos os destinatários encontrados
+    return res.status(200).json({ recipients });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao recuperar encomendas.' });
+    console.error("Erro ao buscar destinatários:", error);
+    return res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
   }
 };

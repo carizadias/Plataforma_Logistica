@@ -22,14 +22,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false
     },
-    owner_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false
-    },
-    owner_type: {
-      type: DataTypes.STRING,
-      allowNull: false
-    }
+    // owner_id: {
+    //   type: DataTypes.INTEGER,
+    //   allowNull: false
+    // },
+    // owner_type: {
+    //   type: DataTypes.STRING,
+    //   allowNull: false
+    // }
   }, {
     tableName: 'addresses',
     timestamps: false
@@ -41,6 +41,9 @@ module.exports = (sequelize, DataTypes) => {
       as: 'city'
     });
   };
+
+  
+
 
   return Address;
 };

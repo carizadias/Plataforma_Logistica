@@ -2,7 +2,7 @@
   "development": {
     "username": "root",
     "password": "Admin@22",
-    "database": "plataforma_logistica",
+    "database": "plataforma_logistica_test",
     "host": "127.0.0.1",
     "dialect": "mysql"
   },
