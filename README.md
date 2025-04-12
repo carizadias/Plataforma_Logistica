@@ -3,7 +3,7 @@ Trabalho de Conclusão de Curso
 
 Este é um projeto desenvolvido como parte do TCC, que demonstra a execução dos testes e a aplicação em modo de desenvolvimento.
 Diagrama de casos de uso:
-![Diagrama de Casos de Uso](tcc_2ªIteração/plataforma-logistica/readmeFiles/Diagrama-Casos-Uso-Plataforma-Logistica.jpg)
+![Diagrama de Casos de Uso]("C:\Users\Administrador\OneDrive\Documents\GitHub\Plataforma_Logistica\tcc_2ªIteração\plataforma-logistica\readmeFiles\Diagrama-Casos-Uso-Plataforma-Logistica.jpg")
 
 
 ## Requisitos
