@@ -15,7 +15,11 @@ module.exports = (sequelize, DataTypes) => {
         },
         continent_id: {
             type: DataTypes.INTEGER,
-            allowNull: false
+            allowNull: false,
+            references:{
+                model:'continents',
+                key:'continent_id'
+            }
         },
         area: {
             type: DataTypes.STRING,
@@ -23,7 +27,11 @@ module.exports = (sequelize, DataTypes) => {
         },
         currency_id: {
             type: DataTypes.INTEGER,
-            allowNull: true
+            allowNull: true,
+            refrences:{
+                model:'currencies',
+                key:'currency_id'
+            }
         },
         timezone: {
             type: DataTypes.STRING,
@@ -41,7 +49,7 @@ module.exports = (sequelize, DataTypes) => {
         },
         type: {
             type: DataTypes.STRING,
-            allowNull: true
+            allowNull: true,//🤔 refrences country_types or national international?
         }
     }, {
         tableName: 'countries',

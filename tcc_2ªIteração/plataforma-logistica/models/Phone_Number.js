@@ -5,14 +5,14 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true,
     },
-    user_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'users',
-        key: 'user_id'
-      }
-    },
+    // user_id: {
+    //   type: DataTypes.INTEGER,
+    //   allowNull: false,
+    //   references: {
+    //     model: 'users',
+    //     key: 'user_id'
+    //   }
+    // },
     phone_number: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -26,12 +26,18 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: false,
   });
 
-  PhoneNumber.associate = function(models) {
-    PhoneNumber.belongsTo(models.User, { 
-      foreignKey: 'user_id', 
-      as: 'user'
-    });
-  };
+  // PhoneNumber.associate = function(models) {
+  //   PhoneNumber.belongsTo(models.User, { 
+  //     foreignKey: 'user_id', 
+  //     as: 'user'
+  //   });
+  // };
+  PhoneNumber.associate = (models) => {
+    PhoneNumber.hasMany(models.PhoneNumber, {
+      foreignKey: 'phone_number_id',
+      as:'owners'
+    })
+  }
 
   return PhoneNumber;
 };

@@ -20,16 +20,12 @@ module.exports = (sequelize, DataTypes) => {
     },
     city_id: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: false,
+      references: {
+        model: 'cities',
+        key: 'city_id',
+      },
     },
-    // owner_id: {
-    //   type: DataTypes.INTEGER,
-    //   allowNull: false
-    // },
-    // owner_type: {
-    //   type: DataTypes.STRING,
-    //   allowNull: false
-    // }
   }, {
     tableName: 'addresses',
     timestamps: false
