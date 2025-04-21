@@ -9,6 +9,9 @@ Diagrama de casos de uso:
 =======
 ![Diagrama de Casos de Uso](readmeFiles/Diagrama-Casos-Uso-Plataforma-Logistica.jpg)
 >>>>>>> Stashed changes
+=======
+![Diagrama de Casos de Uso](readmeFiles/Lógico_1(arrumando2).png)
+>>>>>>> Stashed changes
 
 
 ## Requisitos
