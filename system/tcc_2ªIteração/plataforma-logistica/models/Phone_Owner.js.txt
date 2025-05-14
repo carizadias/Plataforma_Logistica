@@ -1,0 +1,41 @@
+module.exports = (sequelize, DataTypes) => {
+    const PhoneOwner = sequelize.define('PhoneOwner', {
+        phone_owner_id: {
+            type: DataTypes.INTEGER,
+            primaryKey: true,
+            autoIncrement: true,
+        },
+        phone_number_id: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+        },
+        owner_id: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+        },
+        owner_type_id: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+        },
+        created_at: DataTypes.DATE,
+        updated_at: DataTypes.DATE,
+    }, {
+        tableName: 'phone_owners',
+        timestamps: false,
+    });
+
+    PhoneOwner.associate = (models) => {
+        PhoneOwner.belongsTo(models.PhoneNumber, {
+            foreignKey: 'phone_number_id',
+            as: 'phone_number',
+        });
+
+        PhoneOwner.belongsTo(models.PhoneOwnerType, {
+            foreignKey: 'owner_type_id',
+            as: 'owner_type',
+        });
+    };
+
+
+    return PhoneOwner;
+};
