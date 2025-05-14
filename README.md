@@ -1,18 +1,22 @@
-# Plataforma_Logistica
-Trabalho de Conclusão de Curso
+# Plataforma Logística
 
-Este é um projeto desenvolvido como parte do TCC, que demonstra a execução dos testes e a aplicação em modo de desenvolvimento.
-Diagrama de casos de uso:
-<<<<<<< Updated upstream
-=======
+**Trabalho de Conclusão de Curso**
+
+Este é um projeto desenvolvido como parte do Trabalho de Conclusão de Curso (TCC), que demonstra a execução de testes e a aplicação em modo de desenvolvimento.
+
+## Diagramas
+
+### Diagrama de Casos de Uso
 ![Diagrama de Casos de Uso](readmeFiles/Diagrama-Casos-Uso-Plataforma-Logistica.jpg)
->>>>>>> Stashed changes
-=======
-![Diagrama de Entidade Relacionamento](readmeFiles/DER.png)
->>>>>>> Stashed changes
-=======
-![Diagrama de Entidade Relacionamento](readmeFiles/ClassDiagramTCC.png)
 
+### Diagrama de Classes
+![Diagrama de Sequencia Criar Pedido](readmeFiles/DSequencia-criar-pedido.jpg)
+
+### Diagrama de Classes
+![Diagrama de Classes](readmeFiles/ClassDiagramTCC.jpg)
+
+### Diagrama Entidade-Relacionamento (DER)
+![Diagrama de Entidade Relacionamento](readmeFiles/DER.png)
 
 ## Requisitos
 
