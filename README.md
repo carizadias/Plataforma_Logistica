@@ -4,14 +4,14 @@ Trabalho de Conclusão de Curso
 Este é um projeto desenvolvido como parte do TCC, que demonstra a execução dos testes e a aplicação em modo de desenvolvimento.
 Diagrama de casos de uso:
 <<<<<<< Updated upstream
-![Diagrama de Casos de Uso](plataforma-logistica/readmeFiles/Diagrama-Casos-Uso-Plataforma-Logistica.jpg)
-
 =======
 ![Diagrama de Casos de Uso](readmeFiles/Diagrama-Casos-Uso-Plataforma-Logistica.jpg)
 >>>>>>> Stashed changes
 =======
-![Diagrama de Casos de Uso](readmeFiles/Lógico_1(arrumando2).png)
+![Diagrama de Entidade Relacionamento](readmeFiles/DER.png)
 >>>>>>> Stashed changes
+=======
+![Diagrama de Entidade Relacionamento](readmeFiles/ClassDiagramTCC.png)
 
 
 ## Requisitos
