@@ -23,6 +23,6 @@ router.put('/password', authenticate, profileController.updatePassword);//utiliz
 router.put('/picture',setUploadFolder('profile-pictures'), upload.single('file'), authenticate, profileController.updateUserProfilePicture);//todos os users podem usar
 
 //atualizar para buscar por user_id ao em vez de nif(client)
-router.get('/:nif',authenticate, isClientUser, profileController.getUserProfile);//hasPermission('get:client_user_profile')
+router.get('/:id',authenticate, isClientUser, profileController.getClientPublicProfile);//hasPermission('get:client_user_profile')
 
 module.exports = router;

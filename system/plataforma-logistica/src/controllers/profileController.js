@@ -414,14 +414,14 @@ exports.updatePostalCompanyLogotype = async (req, res) => {
   }
 };
 
-exports.getUserProfile = async (req, res) => {
+exports.getClientPublicProfile = async (req, res) => {
   try {
-    //pegar user id de que procura? pra saber quem qt vezes viu profile?
-    const { nif } = req.params;
+    //pegar user id de que busca? pra saber quem qt vezes viu profile?🤔
+    const { id } = req.params;
 
     // Buscar dados completos do usuário para exibição do perfil
     const clientUserData = await ClientUserData.findOne({
-      where: { nif },
+      where: { id },
       include: [
         {
           model: User,
