@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
-const { User, ClientUserData, SystemAdminData, PostalCompanyAdminData, PostalCompanyEmployeeData, PostalCompany, UserType, PhoneNumber, Address, UserAddress, CommonUserData, UserRole} = require('../../models');
+const { User, ClientUserData, SystemAdminData, PostalCompanyAdminData, PostalCompanyEmployeeData, PostalCompany, UserType, PhoneNumber, Address, UserAddress, CommonUserData, UserRole, File} = require('../../models');
 const { sendResetPasswordEmail } = require('../services/emailService');
 const blacklistedTokens = require('../../utils/tokenBlacklist');
 
@@ -18,7 +18,7 @@ exports.register = async (req, res) => {
         let user = await User.findOne({ where: { email } });
 
         if (user) {
-            const existingRole = await UserRole.findOne({ where: { user_id: user.user_id, user_type_name: "client" } });
+            const existingRole = await UserRole.findOne({ where: { user_id: user.user_id, user_type: "client" } });
 
             if (existingRole) {
                 return res.status(400).json({ message: "Usuário já é um cliente!" });
@@ -26,7 +26,7 @@ exports.register = async (req, res) => {
 
             await UserRole.create({
                 user_id: user.user_id,
-                user_type_name: "client",
+                user_type: "client",
             });
 
             await ClientUserData.create({
@@ -43,11 +43,20 @@ exports.register = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        user = await User.create({ name, surname, email, password: hashedPassword , profile_picture_id: 1, country_id, is_active:true});
+        const defaultProfilePicture = await File.findOne({
+          where: {tag:'default_profile_picture'},
+          attributes:['file_id']
+        });
+
+        if (!defaultProfilePicture) {
+          return res.status(500).json({ message: 'Imagem de perfil padrão não encontrada' })
+        }
+
+        user = await User.create({ name, surname, email, password: hashedPassword , profile_picture_id: defaultProfilePicture.file_id, country_id, is_active:true});
 
         await UserRole.create({
             user_id: user.user_id,
-            user_type_name: "client",
+            user_type: "client",
         });
 
         const phoneNumber = await PhoneNumber.create({
@@ -209,7 +218,7 @@ exports.registerAdmin = async (req, res) => {
     if (existingUser) {
       // Verifica se já é admin
       const userRoles = await UserRole.findOne({
-        where: { user_id: existingUser.user_id, user_type_name: 'system_admin' },//colocar os tipos direto aqui ou utilizar utils?
+        where: { user_id: existingUser.user_id, user_type: 'system_admin' },//colocar os tipos direto aqui ou utilizar utils?
       });
 
       if (userRoles) {
